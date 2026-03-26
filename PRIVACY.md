@@ -64,4 +64,4 @@ If you use an AI parsing backend (Claude, OpenAI, or Gemini), your ATC transcrip
 
 ## Contact
 
-Questions or concerns? Open an issue at [github.com/SvgBst0427/VatsimCopilot-Dist](https://github.com/SvgBst0427/VatsimCopilot-Dist).
+Questions or concerns? Open an issue at [github.com/SavBuilds/VatsimCopilot-Dist](https://github.com/SvgBst0427/VatsimCopilot-Dist).
