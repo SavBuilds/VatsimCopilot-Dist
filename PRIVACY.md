@@ -4,7 +4,7 @@
 
 ## Summary
 
-VATSIM Copilot runs entirely on your local machine. Your audio, ATC transcriptions, flight plan data, and callsign are never uploaded anywhere. The only outbound network activity is an optional anonymous usage heartbeat and version check, described below.
+VATSIM Copilot transcribes audio locally using Whisper — your audio never leaves your machine. If you choose to enable an AI parsing backend (Claude, OpenAI, or Gemini), ATC transcriptions are sent to that provider to extract structured instructions. The app also sends an optional anonymous usage heartbeat and version check on startup, described below. No other outbound network activity occurs.
 
 ---
 
