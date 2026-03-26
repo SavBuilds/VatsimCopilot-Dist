@@ -7,7 +7,7 @@
 ### Highlights
 
 #### GPU Acceleration — On-Demand Download
-- Standard build now supports GPU inference without a separate installer, reducing distribution size from 1.8 GB to ~540 MB
+- Standard build now supports GPU inference without a separate installer, reducing distribution size from 1.8 GB to ~400 MB (compressed)
 - Uncheck **Force CPU** in Settings → Audio to trigger an automatic CUDA runtime download (~528 MB)
 - GPU mode reduces average processing latency from ~1,500 ms to ~770 ms (RTX 3080: 100% of cases under 1.5 s)
 - Falls back to CPU silently if GPU is unavailable or download is skipped
