@@ -2,6 +2,143 @@
 
 ---
 
+## v0.2.2 — 2026-04-15
+
+### Weather Panel
+
+#### Faster Weather Loading
+- Departure, arrival, and alternate weather now fetched simultaneously instead of one at a time
+- METAR and TAF fetched concurrently within each airport
+- Worst-case load time reduced from ~42 s to ~12 s
+- Request timeout reduced from 10 s to 6 s
+
+#### Consistent Card Size
+- Weather card is now a fixed height in all states — loading, live data, and no data — so the layout never jumps when results arrive
+
+#### Temperature in Stats Row
+- Temperature now shown in the stats row, replacing the flight category badge
+- Populated from `temp_c` on METAR data, or parsed from `TT/DD` and `TEMP XX` patterns in ATIS text (e.g. `10/09` or `TEMPERATURE 18`)
+
+#### Flight Category Badge
+- Flight category (VFR / MVFR / IFR / LIFR) moved to a dedicated badge directly below the source badge (ATIS / METAR), coloured to match severity
+
+#### No Data State
+- "! Error" in red replaced with a neutral grey "N/A" badge when no weather data is available
+- Raw text box shows "No weather data available." instead of an error message
+
+#### TAF Layout Fix
+- TAF section moved outside the fixed-height card into a shared expandable section below it — no longer clipped when expanded
+
+---
+
+### Busy Frequency Handling
+
+#### Stale Utterance Dropping
+- Utterances that have been waiting in the transcription queue for more than 4 seconds are now dropped automatically
+- Prevents the app from falling behind on busy frequencies and showing results from 30+ seconds ago
+
+#### Dynamic Beam Size Under Backlog
+- When 2 or more utterances are queued, Whisper temporarily switches to greedy decode (beam_size=1, ~2–3× faster) to catch up
+- Returns to beam_size=3 once the queue clears
+- Particularly effective in High Accuracy mode where decode times are longest
+
+---
+
+### Window
+
+#### Window Always Opens Centred
+- Window position is no longer saved or restored between sessions — the window always opens in the centre of the primary screen
+- Eliminates the issue where the splash screen and main window appeared in different positions
+
+---
+
+## v0.2.1 — 2026-04-15
+
+### Window & Startup
+
+#### Startup Crash Fix
+- Fixed a fatal Windows access violation that occurred at launch on some configurations
+- Root cause: `nativeEvent()` was calling `super().nativeEvent()` which routes through Qt's SIP virtual-dispatch trampoline; during `CreateWindowEx`, the HWND→QWindow map entry does not yet exist and the trampoline faulted
+- Fix: `QWidget::nativeEvent()` C++ base is a documented no-op — returning `(False, 0)` directly is identical and avoids the trampoline entirely
+- Native window resize and telemetry are now **enabled by default** on Windows; the temporary `VATSIMCOPILOT_ENABLE_NATIVE_RESIZE` and `VATSIMCOPILOT_ENABLE_TELEMETRY` environment-variable gates have been removed
+
+#### Window Geometry Persistence
+- Window size and position are now saved on close and restored on next launch
+- Position is clamped to the available screen area on restore — the window can never reopen off-screen after a monitor layout change
+- Default size on first run: 900 × 660
+
+#### Minimum Window Size
+- Window now enforces an 800 × 560 minimum — the resize handle stops before any UI content is clipped
+- Matches the layout anatomy: activity bar (48 px) + sidebar (340 px) + margins (48 px) + minimum content area (364 px)
+
+#### Window Chrome Buttons
+- Minimise, maximise, and close buttons now use **Segoe MDL2 Assets** (`ChromeMinimize` U+E921, `ChromeMaximize` U+E922, `ChromeRestore` U+E923, `ChromeClose` U+E8BB) — the same glyphs Windows uses for its own titlebar chrome
+- All three buttons are fixed at 46 × 36 px for consistent alignment
+- Maximise button now correctly toggles to the restore icon (❐) whenever the window is maximised — including via Win+Up, snap, or taskbar double-click — and back on restore; previously only tracked button-click and double-click
+
+#### Close Confirmation While Listening
+- Closing the window while the audio engine is actively listening now shows a confirmation dialog
+- Dialog is frameless and styled to match the app; neither button is pre-focused or highlighted
+- Buttons labelled **Exit** (destructive, red) and **Keep listening** (safe default)
+
+#### Startup Splash Screen
+- A dark splash screen is shown immediately on launch, covering the brief white-flash artifact that occurred while DWM applied the translucent background to the frameless window
+- Splash displays app name and version, sized and positioned to match the main window exactly — no visible jump on dismiss
+- Splash stays visible for a minimum of 1.5 seconds then transitions atomically to the main window
+
+---
+
+## v0.2.0 — 2026-04-13
+
+### Alternate Airport Weather
+- SimBrief alternate airport is now parsed from the OFP and displayed in the weather panel
+- Weather card replaced with a **DEP / ARR / ALTN** segmented toggle — one card visible at a time
+- ALTN button is hidden when no alternate is filed
+- Auto-refresh countdown timer shows time until next weather update
+
+### Controller Info Panel
+- Hovering over a controller row for ~800 ms shows a popup with the controller's name and full ATIS/info text
+- Links in controller info are clickable and open in the default browser
+- URLs typed in VATSIM's common shorthand (`https //example.com`) are automatically normalised to `https://` and rendered as clickable links
+- Popup appears to the right of the cursor and resizes to fit content
+- Moving between controllers hides the current popup and waits for a fresh hover before showing the new one
+- Popup stays open when the cursor moves over it so links can be clicked
+
+### ATC Panel
+- Controllers refresh every 30 seconds in the background — list updates silently without showing a "Fetching" flash if nothing has changed
+- Enroute center (CTR) controllers filtered by proximity to departure/arrival airports (400 nm radius); falls back to showing all CTRs if coordinates are unavailable
+- ATC sidebar icon updated and renamed to **ATC**
+
+### Weather Display
+- Flight category (VFR / MVFR / IFR / LIFR) now correctly computed when no cloud layers are reported (clear skies) and when visibility is reported as `10+`
+- ATIS letter badge and METAR label are now the same fixed width — switching between them no longer causes the card to resize
+
+### SimBrief OFP Viewer
+- OFP viewer window is now independent — both the OFP and the main window can be brought to the foreground freely
+- "Edit on SimBrief" button links directly to the active OFP dispatch page
+
+### Bug Fixes
+- Fixed callsign false positives on unknown airline codes with digit-only suffixes (v0.1.3-beta fix carried forward)
+- Fixed fuzzy phonetic matcher allowing short tokens to match unrelated words (v0.1.3-beta fix carried forward)
+
+---
+
+## v0.1.3-beta — 2026-04-12
+
+### Bug Fixes
+
+#### Callsign Recognition — False Positives on Unknown Airline Codes
+- Fixed a bug where callsigns with an unrecognised 3-letter ICAO prefix and a pure-digit flight number (e.g. `MRC222`, `ATL222`) were misclassified as GA tail numbers
+- This caused the abbreviated-suffix matching path to generate spoken forms like `"two two two"` and fuzzy-match them against common short words in unrelated transmissions, triggering false `Callsign matched` events for chatter from other aircraft
+- Fix: any callsign whose alphabetic prefix is 2+ characters and whose suffix is entirely digits is now treated as an airline-style callsign, not a tail number. Single-letter GA prefixes (`N12345`, `C-FXYZ`) and mixed-suffix registrations (`N123AB`) are unaffected
+
+#### Callsign Recognition — Short Token Edit-Distance Too Permissive
+- Fixed a related issue where the fuzzy phonetic matcher allowed 2- and 3-character tokens (e.g. `"77"`, `"two"`, `"one"`) to match almost any short common English word due to a fixed edit-distance tolerance of 2 regardless of token length
+- For example, `"77"` matched `"on"` (dist=2, 2-char tokens) and `"romeo"` matched `"are"` (dist=2, short transcript word), together causing `["mike", "are", "you", "on"]` to satisfy a `MRC77` phonetic prefix match
+- Fix: tolerance now scales with the shorter token's length — 2-char tokens require exact match, 3-char tokens allow dist ≤ 1, 4+ char tokens retain the original dist ≤ 2. Common ATC variants (`"tree"` ↔ `"three"`, `"romero"` ↔ `"romeo"`) still match correctly; normalisation handles `"ate"`, `"niner"`, `"fife"`, `"too"` before the comparison
+
+---
+
 ## v0.1.0-beta — 2026-03-26
 
 ### Highlights

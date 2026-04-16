@@ -3,90 +3,47 @@
 ![Status](https://img.shields.io/badge/status-beta-blue)
 ![Platform](https://img.shields.io/badge/platform-windows-blue)
 ![Engine](https://img.shields.io/badge/speech-faster--whisper-green)
-![Version](https://img.shields.io/badge/version-0.1.0--beta-informational)
+![Version](https://img.shields.io/badge/version-0.2.1-informational)
 
-**VATSIM Copilot** is a real-time ATC assistant for VATSIM pilots. It listens to ATC audio, transcribes it locally using Whisper, and extracts structured instructions — altitude, heading, squawk, routing, and more — so you never miss a clearance.
+**VATSIM Copilot** is a real-time ATC assistant for VATSIM pilots. It listens to ATC audio, transcribes it locally using Whisper, filters for your callsign, and extracts structured instructions such as altitude, heading, speed, squawk, runway, and route information.
 
-All audio transcription runs **entirely on your machine**. No audio is ever uploaded.
-
----
-
-## What It Does
-
-When ATC says:
-
-> "DAL123 descend and maintain 5,000, turn left heading 240, reduce speed to 210."
-
-Copilot shows:
-
-| Field | Value |
-|---|---|
-| Altitude | 5,000 ft |
-| Heading | 240° |
-| Speed | 210 kts |
-
-And generates a suggested readback.
+All audio transcription runs locally on your machine. Audio is never uploaded by VATSIM Copilot itself.
 
 ---
 
 ## How It Works
 
-```
-ATC Audio → Whisper (local) → Callsign Filter → Rules Parser → Instruction Card
-                                                      ↓
-                                             Optional AI assist
-                                          (Claude / GPT-4o / Gemini)
+```text
+ATC Audio -> Whisper (local) -> Callsign Filter / Stitching -> Rules Parser -> Instruction Card
+                                                       |
+                                                       -> Optional AI backend
+                                                          (Claude, ChatGPT, Gemini, or Local AI)
 ```
 
-Callsign filtering happens locally before any AI call — unrelated traffic never reaches the AI backend.
+Copilot keeps normal callsign filtering local before AI parsing. Optional Local AI support lets you use any OpenAI-compatible local server without sending transcripts to a cloud provider.
 
 ---
 
-## Parsing Modes
+## Parsing Behavior
 
 | Mode | Description |
 |---|---|
-| **Offline (Rules)** | Fully local, no API key needed. 100% accuracy on standard phraseology. |
-| **AI Assisted** | Rules parser first; AI handles edge cases and unusual phrasing. |
-| **AI Only** | All parsing delegated to the AI backend. |
-| **Raw Debug** | Shows raw Whisper transcript with no filtering. |
+| **Offline** | Fully local rules-based parsing. No API key required. |
+| **AI Assisted** | Rules parser runs first, then an AI backend handles edge cases and unusual phraseology. |
+| **AI Only** | Bypasses the rules engine, but still keeps local callsign filtering unless AI Raw debug is enabled. |
+| **AI Raw Debug** | Debug-only mode that sends every heard transcript to the selected AI backend and bypasses the local callsign filter. |
 
 ---
 
-## Performance
+## Audio Routing
 
-Validated on 50 FAA + ICAO cases (v0.1.0, rules-only):
+Current audio routing options include:
 
-| Metric | CPU | GPU (RTX 3080) |
-|---|---|---|
-| Avg processing latency | ~1,518 ms | ~770 ms |
-| Cases under 1.5 s | 48% | 100% |
-| Rules accuracy | 100% | 100% |
-
----
-
-## GPU Acceleration
-
-The Standard build supports on-demand GPU acceleration. When you disable **Force CPU** in Settings for the first time, the CUDA runtime (~528 MB) downloads automatically. No separate installer required.
-
----
-
-## Audio Setup
-
-### Recommended — VB-Audio Virtual Cable
-
-```
-vPilot audio output  →  CABLE Input
-CABLE Output         →  Copilot (input device)
-```
-
-### Advanced — VoiceMeeter
-
-```
-vPilot → VoiceMeeter AUX Input → B1 bus → Copilot
-```
-
-Select **Voicemeeter Out B1** as the input device in Copilot. Do not select A1/A2/A3 (headset outputs).
+- **Virtual Cable (Recommended)** for clean ATC-only capture
+- **Virtual Cable + Bridge** when Copilot should also mirror ATC to your headset
+- **System Loopback** to capture all system audio
+- **Microphone Test** for direct parser testing
+- **BEACN / Hardware Mixer** when compatible BEACN devices are detected
 
 ---
 
@@ -94,30 +51,34 @@ Select **Voicemeeter Out B1** as the input device in Copilot. Do not select A1/A
 
 | Integration | What It Adds |
 |---|---|
-| **SimBrief** | Route-aware parsing — crossing restrictions, SID/STAR fixes resolved automatically |
-| **VATSIM** | Live flight plan sync, altitude and squawk cross-check |
-| **Navigraph DFD** | Fix/waypoint recognition for improved parser accuracy |
+| **SimBrief** | Loads flight plan context, OFP text, alternate airport, route/runway context, and dispatch shortcuts |
+| **VATSIM** | Live status, route revision enrichment, CID-aware flight plan matching, and controller/network context |
+| **Weather / ATIS** | Departure, arrival, and alternate airport weather with ATIS/METAR fallback |
+| **ATC Panel** | Nearby controllers with hover details, ATIS/info popups, and clickable links |
+| **Navigraph DFD** | Better waypoint/fix recognition and route-aware parsing |
 
 ---
 
 ## Privacy
 
-- Audio is transcribed locally by Whisper — never uploaded
-- If an AI backend is enabled, ATC transcriptions are sent to that provider
-- An anonymous usage heartbeat is sent on startup (opt out: `DO_NOT_TRACK=1`)
+- Audio is transcribed locally and is not uploaded by VATSIM Copilot
+- If you select a cloud AI backend, matched ATC transcripts are sent to that provider for parsing
+- Telemetry/update checks can be disabled with `DO_NOT_TRACK=1` or `SCARF_NO_ANALYTICS=1`
+- API keys are stored in the OS credential vault when available, with a local fallback only when keyring support is unavailable
 - Full privacy policy: [savbuilds.github.io/VatsimCopilot-Dist/PRIVACY](https://savbuilds.github.io/VatsimCopilot-Dist/PRIVACY)
 
 ---
 
 ## Quickstart
 
-1. Extract the distribution folder
-2. Launch `VATSIM_Copilot.exe`
-3. Set your audio input device in Settings → Audio
-4. Enter your callsign in the Live Session panel
-5. Click **Start Listening**
+1. Launch `VATSIM_Copilot.exe`
+2. Open **Settings**
+3. Choose an **Audio Routing Mode** and select the correct capture device
+4. Enter your callsign in the **Live Session** panel
+5. Optionally save your SimBrief username in **Settings -> Connections**
+6. Click **Start Listening**
 
-See `VATSIM_Copilot_Manual.pdf` for full setup and configuration instructions.
+See `VATSIM_Copilot_Manual.pdf` for the full setup and workflow guide.
 
 ---
 
