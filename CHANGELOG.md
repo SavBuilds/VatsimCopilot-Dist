@@ -2,6 +2,15 @@
 
 ---
 
+## v0.2.3 — 2026-05-02
+
+### Update Notifications
+- App now checks GitHub for updates automatically on every launch
+- An amber **↑ vX.X.X available** badge appears in the footer when a newer version is available
+- Clicking the badge opens the release page directly in your browser
+
+---
+
 ## v0.2.2 — 2026-04-15
 
 ### Weather Panel
