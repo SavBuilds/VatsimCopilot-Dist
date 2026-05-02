@@ -50,7 +50,6 @@ jobs:
           # Append asset filenames as positional args (gh handles the upload).
           gh release create "$TAG" \
             --title "$TAG" \
-            --generate-notes \
             ${{ steps.assets.outputs.files }}
 
           echo "Release $TAG published."
