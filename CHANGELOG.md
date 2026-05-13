@@ -2,6 +2,100 @@
 
 ---
 
+## v0.3.1 — 2026-05-13
+
+### Diagnostics & Logging
+
+- `airport_context`: exception info (`exc_info=True`) now logged on CSV parse failures; warning emitted when Overpass response is truncated at the 5000-element cap
+- `audio_worker`: CUDA DLL registration errors buffered and emitted via logger after logging initialises; single summary log (with candidate list) when `_negotiate_duplex_rate` exhausts all sample-rate probes
+- `navigraph`: expanded `_safe_sql_identifier` docstring with size-range rationale
+- `parsers`: module logger added; `GeminiParser` `print()` replaced with `logger.error()`; regex in `_try_direct_to` compiled once per candidate (was compiled twice)
+- `vatsim_sync`: module logger added; `logger.exception` on sync loop errors so full traceback reaches `debug.log`
+- `app_models`: removed duplicate `pass`/comment block in settings loader
+
+---
+
+## v0.3.0 — 2026-05-11
+
+### MSFS 2024 EFB Panel
+
+#### In-Sim Instruction Cards
+- VATSIM Copilot now runs as a native EFB app inside MSFS 2024 — no alt-tab required
+- Parsed instruction cards appear in-sim with the same type badge, field breakdown, readback suggestion, and confidence indicator as the desktop app
+- Live transcription feed shows Whisper output word-by-word as each segment is decoded, then collapses when the full instruction card appears
+- Instruction type badges are colour-coded by phase: CLEARANCE (blue), TAXI (purple), TAKEOFF / LAND (green), LINE UP (amber), GO AROUND (red)
+
+#### Controls
+- Callsign can be updated directly from the EFB panel without switching to the desktop app
+- SimBrief reload button triggers a fresh OFP fetch and reflects the result on both the panel and the desktop app simultaneously
+- Listen toggle starts and stops the audio engine from inside the sim
+- OK button dismisses the current instruction card
+
+#### Connection & Recovery
+- Panel connects automatically to the desktop app over a local WebSocket (`ws://127.0.0.1:7823/`)
+- Status banner shows "VATSIM Copilot not running" and buttons disable when the desktop app is not running
+- Reconnects every 2 seconds automatically — opening the desktop app mid-session restores the panel instantly
+- On reconnect, the panel immediately replays the current listen state, callsign, and last parsed result — no waiting for the next transmission
+
+---
+
+### Datalink — Hoppie ACARS / CPDLC
+
+#### DATALINK Panel
+- New **DATALINK** section in the Network sidebar shows incoming Hoppie ACARS messages
+- Messages are shown newest-first, capped at 20, each with sender callsign, message type badge (CPDLC / PDC / TELEX), timestamp, and full message text
+- Status line reflects link state in real time: "Connected · no messages", message count, or error reason
+
+#### Background Polling
+- Polling daemon runs automatically once Hoppie is enabled and a callsign is active
+- Adaptive interval: 20 seconds while messages have been received recently, 60 seconds when idle — no unnecessary requests during quiet cruise
+- Polling restarts automatically if the callsign changes mid-session
+
+#### Setup
+- New **Hoppie ACARS** section in Settings → Connections: enable toggle, logon code field (password-masked), and a direct link to the Hoppie registration page
+- Logon code is stored in the OS credential vault (Windows Credential Manager) when available; obfuscated in `settings.json` as a fallback
+
+---
+
+### WebSocket Panel Server
+
+- `ws_server.py` — new local WebSocket server on `ws://127.0.0.1:7823/` (loopback only; firewall-exempt on Windows by default)
+- Broadcasts four message kinds to connected clients: `partial` (live transcript segment), `transcript` (full text, signals end of utterance), `parsed` (full instruction result), `status` (listen state and active callsign)
+- Accepts inbound commands from the panel: `set_callsign`, `set_listening`, `reload_simbrief`, `dismiss_card`
+- State is replayed to clients on connect — a panel that opens mid-session immediately receives the current state without waiting for the next event
+- Broadcast overhead is under 1 ms per event; no impact on the audio pipeline or UI frame budget
+
+### Appearance
+
+#### Font Size Option
+- Added Small / Normal / Large / Extra Large font size selector to Settings → Appearance
+- Applies globally at 9 / 11 / 13 / 15 px respectively; persisted across sessions
+
+#### Keep on Top Toggle
+- Added On / Off toggle to Settings → Appearance → Window
+- Keeps the Copilot window above all other windows when enabled; off by default
+
+### VATSIM Status
+
+#### Callsign Waiting State Colour Fix
+- "Waiting for pilot to appear" status now shows in amber instead of green
+- Green is reserved for the confirmed-connected state only
+
+#### Clearer Error Messages
+- Bridge mode errors now distinguish between sample rate conflicts and WASAPI exclusive mode conflicts
+- WASAPI exclusive mode errors surface a specific hint to disable exclusive control in Windows Sound Settings
+- Sample rate negotiation failure and stream-open failure are now reported separately
+
+#### Duplex Stream Replaced with Independent Streams
+- Bridge mode now opens VB-Cable and the headset as two separate streams instead of a single duplex `RawStream`
+- Fixes `paBadIODeviceCombination` (-9993) which occurred whenever the two devices were on different PortAudio host APIs (the common case for VB-Cable + a USB headset on Windows)
+- Each device negotiates its own sample rate independently; resampling is applied in the passthrough path if they differ
+
+#### Sample Rate Negotiation Fix
+- Fixed a logic error in duplex rate negotiation where the mono-output fallback path checked only the output device, not the input — could select a rate the input device didn't support
+
+---
+
 ## v0.2.3 — 2026-05-02
 
 ### Update Notifications
