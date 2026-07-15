@@ -2,6 +2,54 @@
 
 ---
 
+## v0.3.2 — 2026-07-15
+
+### Reliability & Correctness
+
+- Fixed a race where a slow AI-tier parse could silently overwrite a newer instruction on the live card. Every parse is now stamped at submission; a stale result can never replace the current card, but still appears in the history panel in spoken order — nothing is silently dropped
+- Worst-case freeze when an AI backend is degraded cut from 60–100 s to ~15 s: SDK-level retries disabled and timeouts tightened on all three cloud backends; the app's own circuit breaker now solely owns failure handling
+- If the AI backend fails mid-parse, the app now falls back to the already-computed rules-tier result (marked for review) instead of dropping the instruction behind a status-bar error — and safety-relevant notes (mandatory readback items, mishear warnings) are preserved, not overwritten
+- Audio engine auto-recovery: a hung audio worker is now restarted automatically (up to 3 attempts per listening session, 60 s cooldown). If recovery fails, listening stops cleanly with a persistent "check the audio device" message. Also fixed the watchdog liveness check itself, which could never fire before
+- Fixed a settings-save path that could lose credentials stored in the Windows credential vault, and a WebSocket server race on shutdown
+
+### Degraded-Mode Visibility
+
+- New persistent footer badges show system health at a glance: utterance backlog, instructions dropped this session, AI backend cooling down, rules-only (budget) mode, and stale-context warnings
+- Dropped-instruction counting now covers all loss paths and survives audio worker restarts
+- AI parser instances are now cached per backend — the circuit breaker genuinely accumulates across parses and the session prompt reaches every live parse (both were previously reset on each parse)
+- Animated "parsing…" indicator whenever an AI-tier parse is in flight; the instant rules tier stays motion-free
+- "Voice detected…" status now appears during the VAD silence gate, so the app is never silent while it waits for a transmission to end
+- Soft warning at 80% of the session AI cost ceiling before the hard cutover to offline mode; fixed the cost badge showing a stale "LIMIT" state
+
+### Performance & Latency
+
+- Live parses run on a dedicated priority lane — weather, SimBrief, and controller fetches can no longer queue an instruction parse behind them
+- The VATSIM datafeed is fetched once and shared by weather, controllers, and flight-plan sync (previously three independent fetch schedules): less bandwidth, consistent panels, and a brief network blip no longer blanks every panel at once
+- Whisper retry passes capped at one per utterance — faster results on difficult audio
+- Settings auto-save debounced — no more disk write on every keystroke
+- Startup splash minimum hold reduced from 1.5 s to 0.6 s
+- New VAD latency presets in Settings — Fast (400 ms) / Balanced (600 ms) / Careful (900 ms) — on top of the existing millisecond slider
+
+### Privacy & Telemetry
+
+- New `VATSIMCOPILOT_NO_UPDATE_CHECK=1` environment variable disables only the GitHub release check
+- `SCARF_NO_ANALYTICS=1` now disables only the Scarf analytics beacon
+- `DO_NOT_TRACK=1` continues to disable both startup network calls
+
+### Appearance
+
+- Font size setting now applies consistently across the whole UI via a role-based font system — inputs, combo boxes, buttons, checkboxes, and labels all scale together
+- Sidebar width adapts to the selected font size so settings controls are never clipped
+- Settings panel scrolls back to the top when re-opened
+
+### Diagnostics & Benchmarks
+
+- Per-session latency summary logged at close, broken down by serving tier (rules vs. each AI backend)
+- New `dev_bench.py --ai-live` mode measures real p50/p95 latency and spend per AI backend
+- The GPU benchmark now warns when the GPU is under external load (e.g. a running sim), which inflates decode times and previously looked like a regression
+
+---
+
 ## v0.3.1 — 2026-05-13
 
 ### Diagnostics & Logging
