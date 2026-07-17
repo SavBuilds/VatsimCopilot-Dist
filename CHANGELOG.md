@@ -2,6 +2,19 @@
 
 ---
 
+## v0.3.3 — 2026-07-17
+
+### Reliability & Correctness
+
+- Fixed a permanent startup failure: "Failed to load Whisper model: Unable to open file 'model.bin'". An interrupted first model download left a cache folder that the app treated as a valid model on every subsequent launch, with no recovery path short of manually deleting it. The cache is now validated before use, an incomplete download is repaired automatically on the next start (completed files are kept — only the missing part is fetched), and as a last resort a damaged model cache is purged and re-downloaded once
+- The model download progress bar could be left spinning forever after a failed or fallback download; it now always clears when the download phase ends
+
+### Model Download Experience
+
+- Real download progress: the status line shows the size up front ("Downloading Whisper model (~1530 MB — one time)…") and the progress bar now tracks actual bytes received throughout the multi-minute download, instead of sitting static until the end. Killing the app because the download "looked hung" was the main way the corrupted-cache failure above was created — and if the app is closed mid-download anyway, the download now resumes cleanly on the next start
+
+---
+
 ## v0.3.2 — 2026-07-15
 
 ### Reliability & Correctness
